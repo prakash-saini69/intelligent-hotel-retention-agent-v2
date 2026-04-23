@@ -10,6 +10,8 @@ services:
     ports:
       - "8080:8080"
       - "50000:50000"
+      - "5000:5000"   # ADDED: Flask Backend
+      - "8501:8501"   # ADDED: Streamlit Frontend
     volumes:
       - jenkins_home:/var/jenkins_home
 

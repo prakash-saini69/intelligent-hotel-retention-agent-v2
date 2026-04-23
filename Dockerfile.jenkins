@@ -1,8 +1,8 @@
 FROM jenkins/jenkins:lts
 USER root
 
-# Install Python and curl
-RUN apt-get update && apt-get install -y python3 python3-venv python3-pip curl
+# ADDED 'procps' HERE so Jenkins can kill old processes before deploying new ones
+RUN apt-get update && apt-get install -y python3 python3-venv python3-pip curl procps
 
 # Install uv globally
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \

@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Specify that uv should not prompt
         UV_NO_SYNC = '1'
     }
 
@@ -17,12 +16,6 @@ pipeline {
         stage('Setup Dependencies') {
             steps {
                 sh '''
-                echo "Python version:"
-                python3 --version
-                
-                echo "Installing uv..."
-                uv --version || echo "uv is already available"
-
                 echo "Creating virtual environment and installing dependencies..."
                 uv venv
                 uv pip install -r requirements.txt
@@ -33,25 +26,32 @@ pipeline {
         stage('Code Compile & Syntax Check') {
             steps {
                 sh '''
-                # Run python compile to check for syntax errors
                 .venv/bin/python -m py_compile main.py app.py
                 echo "Code syntax checked successfully!"
                 '''
             }
         }
         
-        // This is a placeholder for actual deployment
-        stage('Deploy (Mock)') {
+        stage('Deploy (CD)') {
             steps {
-                echo 'Starting deployment to mock server...'
-                echo 'Deployment successful! 🎉'
+                echo 'Stopping old application versions...'
+                sh '''
+                pkill -f "python main.py" || true
+                pkill -f "streamlit" || true
+                '''
+
+                echo 'Starting new application versions in the background...'
+                sh '''
+                JENKINS_NODE_COOKIE=dontKillMe nohup uv run python main.py > backend.log 2>&1 &
+                JENKINS_NODE_COOKIE=dontKillMe nohup uv run streamlit run app.py > frontend.log 2>&1 &
+                '''
             }
         }
     }
     
     post {
         success {
-            echo '✅ Pipeline execution completed successfully!'
+            echo '✅ Pipeline execution completed successfully! Apps are running.'
         }
         failure {
             echo '❌ Pipeline execution failed. Please check the logs.'
