@@ -15,8 +15,9 @@ pipeline {
         
         stage('Setup Dependencies') {
             steps {
-                sh '''
-                echo "Creating virtual environment and installing dependencies..."
+                // Changed from 'sh' to 'bat' for Windows
+                bat '''
+                echo Creating virtual environment and installing dependencies...
                 uv venv
                 uv pip install -r requirements.txt
                 '''
@@ -25,9 +26,10 @@ pipeline {
 
         stage('Code Compile & Syntax Check') {
             steps {
-                sh '''
-                .venv/bin/python -m py_compile main.py app.py
-                echo "Code syntax checked successfully!"
+                // Windows uses .venv\\Scripts\\python.exe instead of .venv/bin/python
+                bat '''
+                .venv\\Scripts\\python.exe -m py_compile main.py app.py
+                echo Code syntax checked successfully!
                 '''
             }
         }
@@ -35,15 +37,20 @@ pipeline {
         stage('Deploy (CD)') {
             steps {
                 echo 'Stopping old application versions...'
-                sh '''
-                pkill -f "python main.py" || true
-                pkill -f "streamlit" || true
+                // taskkill is the Windows version of pkill. 
+                // || exit 0 ensures the pipeline doesn't fail if the apps aren't running yet.
+                bat '''
+                taskkill /F /IM python.exe /T >nul 2>&1 || exit 0
                 '''
 
                 echo 'Starting new application versions in the background...'
-                sh '''
-                JENKINS_NODE_COOKIE=dontKillMe nohup uv run python main.py > backend.log 2>&1 &
-                JENKINS_NODE_COOKIE=dontKillMe nohup uv run streamlit run app.py > frontend.log 2>&1 &
+                // 'start /B' is the Windows equivalent of 'nohup ... &' for background tasks
+                // BUILD_ID=dontKillMe tells Windows Jenkins not to close your app when the pipeline finishes
+                bat '''
+                set BUILD_ID=dontKillMe
+                set JENKINS_NODE_COOKIE=dontKillMe
+                start /B uv run python main.py > backend.log 2>&1
+                start /B uv run streamlit run app.py > frontend.log 2>&1
                 '''
             }
         }
@@ -51,7 +58,7 @@ pipeline {
     
     post {
         success {
-            echo '✅ Pipeline execution completed successfully! Apps are running.'
+            echo '✅ Pipeline execution completed successfully! Apps are running natively on Windows.'
         }
         failure {
             echo '❌ Pipeline execution failed. Please check the logs.'
